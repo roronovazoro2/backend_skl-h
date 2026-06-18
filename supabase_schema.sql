@@ -1,31 +1,31 @@
 -- KissanShakti farm labor and equipment rental platform schema.
--- Run this in Supabase SQL Editor, then POST /api/v1/platform/seed.
+-- Run this in Supabase SQL Editor to cleanly recreate the schema and seed mock data.
 
-alter table if exists public.profiles alter column id type text using id::text;
-alter table if exists public.jobs alter column id type text using id::text;
-alter table if exists public.workers alter column id type text using id::text;
-alter table if exists public.equipment alter column owner_id type text using owner_id::text;
-alter table if exists public.rentals alter column equipment_id type text using equipment_id::text;
-alter table if exists public.rentals alter column renter_id type text using renter_id::text;
-alter table if exists public.rentals alter column owner_id type text using owner_id::text;
-alter table if exists public.jobs alter column laborer_id type text using laborer_id::text;
-alter table if exists public.applications alter column job_id type text using job_id::text;
-alter table if exists public.applications alter column laborer_id type text using laborer_id::text;
-alter table if exists public.workdays alter column job_id type text using job_id::text;
-alter table if exists public.workdays alter column laborer_id type text using laborer_id::text;
-alter table if exists public.notifications alter column user_id type text using user_id::text;
-alter table if exists public.engagements alter column farmer_id type text using farmer_id::text;
-alter table if exists public.engagements alter column worker_id type text using worker_id::text;
-alter table if exists public.engagements alter column job_id type text using job_id::text;
-alter table if exists public.listings alter column farmer_id type text using farmer_id::text;
-alter table if exists public.draft_listings alter column farmer_id type text using farmer_id::text;
-alter table if exists public.inquiries alter column buyer_id type text using buyer_id::text;
-alter table if exists public.inquiries alter column farmer_id type text using farmer_id::text;
-alter table if exists public.inquiries alter column listing_id type text using listing_id::text;
-alter table if exists public.advisories alter column farmer_id type text using farmer_id::text;
-alter table if exists public.voice_sessions alter column user_id type text using user_id::text;
+-- ==========================================
+-- 1. CLEAN SLATE: Drop existing tables to clear type conflicts
+-- ==========================================
+drop table if exists public.sync_logs cascade;
+drop table if exists public.sync_queue cascade;
+drop table if exists public.workers cascade;
+drop table if exists public.advisories cascade;
+drop table if exists public.inquiries cascade;
+drop table if exists public.draft_listings cascade;
+drop table if exists public.listings cascade;
+drop table if exists public.engagements cascade;
+drop table if exists public.voice_sessions cascade;
+drop table if exists public.blacklist cascade;
+drop table if exists public.notifications cascade;
+drop table if exists public.workdays cascade;
+drop table if exists public.applications cascade;
+drop table if exists public.jobs cascade;
+drop table if exists public.rentals cascade;
+drop table if exists public.equipment cascade;
+drop table if exists public.profiles cascade;
 
-create table if not exists public.profiles (
+-- ==========================================
+-- 2. FRESH TABLE CREATION (All IDs as TEXT)
+-- ==========================================
+create table public.profiles (
   id text primary key,
   email text unique,
   full_name text not null,
@@ -44,7 +44,7 @@ create table if not exists public.profiles (
   updated_at timestamptz default now()
 );
 
-create table if not exists public.equipment (
+create table public.equipment (
   id text primary key,
   owner_id text references public.profiles(id) on delete cascade,
   name text not null,
@@ -57,7 +57,7 @@ create table if not exists public.equipment (
   updated_at timestamptz default now()
 );
 
-create table if not exists public.rentals (
+create table public.rentals (
   id text primary key,
   equipment_id text references public.equipment(id) on delete cascade,
   renter_id text references public.profiles(id) on delete cascade,
@@ -72,7 +72,7 @@ create table if not exists public.rentals (
   updated_at timestamptz default now()
 );
 
-create table if not exists public.jobs (
+create table public.jobs (
   id text primary key,
   farmer_id text references public.profiles(id) on delete cascade,
   laborer_id text references public.profiles(id) on delete set null,
@@ -92,7 +92,7 @@ create unique index if not exists one_active_job_per_laborer
   on public.jobs(laborer_id)
   where laborer_id is not null and status in ('ASSIGNED', 'ACTIVE');
 
-create table if not exists public.applications (
+create table public.applications (
   id text primary key,
   job_id text references public.jobs(id) on delete cascade,
   laborer_id text references public.profiles(id) on delete cascade,
@@ -102,7 +102,7 @@ create table if not exists public.applications (
   unique(job_id, laborer_id)
 );
 
-create table if not exists public.workdays (
+create table public.workdays (
   id text primary key,
   job_id text references public.jobs(id) on delete cascade,
   laborer_id text references public.profiles(id) on delete cascade,
@@ -113,7 +113,7 @@ create table if not exists public.workdays (
   unique(job_id, date)
 );
 
-create table if not exists public.notifications (
+create table public.notifications (
   id text primary key,
   user_id text references public.profiles(id) on delete cascade,
   type text not null,
@@ -124,7 +124,7 @@ create table if not exists public.notifications (
   created_at timestamptz default now()
 );
 
-create table if not exists public.blacklist (
+create table public.blacklist (
   id text primary key,
   email text,
   phone text,
@@ -132,7 +132,7 @@ create table if not exists public.blacklist (
   created_at timestamptz default now()
 );
 
-create table if not exists public.voice_sessions (
+create table public.voice_sessions (
   id text primary key,
   user_id text references public.profiles(id) on delete set null,
   session_id text not null,
@@ -144,7 +144,7 @@ create table if not exists public.voice_sessions (
   created_at timestamptz default now()
 );
 
-create table if not exists public.engagements (
+create table public.engagements (
   id text primary key,
   farmer_id text references public.profiles(id) on delete cascade,
   worker_id text references public.profiles(id) on delete cascade,
@@ -159,7 +159,7 @@ create table if not exists public.engagements (
   updated_at timestamptz default now()
 );
 
-create table if not exists public.listings (
+create table public.listings (
   id text primary key,
   farmer_id text references public.profiles(id) on delete cascade,
   name text not null,
@@ -174,7 +174,7 @@ create table if not exists public.listings (
   updated_at timestamptz default now()
 );
 
-create table if not exists public.draft_listings (
+create table public.draft_listings (
   id text primary key,
   farmer_id text references public.profiles(id) on delete cascade,
   name text not null,
@@ -188,7 +188,7 @@ create table if not exists public.draft_listings (
   updated_at timestamptz default now()
 );
 
-create table if not exists public.inquiries (
+create table public.inquiries (
   id text primary key,
   buyer_id text references public.profiles(id) on delete cascade,
   farmer_id text references public.profiles(id) on delete cascade,
@@ -202,7 +202,7 @@ create table if not exists public.inquiries (
   updated_at timestamptz default now()
 );
 
-create table if not exists public.advisories (
+create table public.advisories (
   id text primary key,
   farmer_id text references public.profiles(id) on delete cascade,
   input_type text not null check (input_type in ('image', 'voice', 'text')),
@@ -216,7 +216,7 @@ create table if not exists public.advisories (
   updated_at timestamptz default now()
 );
 
-create table if not exists public.workers (
+create table public.workers (
   id text primary key,
   name text not null,
   phone text,
@@ -229,7 +229,7 @@ create table if not exists public.workers (
   sync_status text default 'pending_create'
 );
 
-create table if not exists public.sync_queue (
+create table public.sync_queue (
   id text primary key,
   action text not null check (action in ('create', 'update', 'delete')),
   entity_type text not null,
@@ -238,7 +238,7 @@ create table if not exists public.sync_queue (
   created_at timestamptz default now()
 );
 
-create table if not exists public.sync_logs (
+create table public.sync_logs (
   id text primary key,
   status text not null check (status in ('pending', 'completed', 'failed')),
   message text,
@@ -247,7 +247,9 @@ create table if not exists public.sync_logs (
   updated_at timestamptz default now()
 );
 
--- Mock seed data for development and Supabase sync
+-- ==========================================
+-- 3. SEED DATA GENERATION
+-- ==========================================
 insert into public.profiles (id, email, full_name, phone, role, state, skills, buyer_type, preferences, daily_rate, experience_yrs, status, blacklist_reason, admin_note, created_at, updated_at)
 values
   ('user_admin', 'admin@kissan.in', 'Platform Admin', '+91 90000 00000', 'ADMIN', NULL, '{}', NULL, '{}', NULL, NULL, 'APPROVED', NULL, 'Internal administrator', now(), now()),
@@ -256,59 +258,49 @@ values
   ('user_buyer_vijay', 'vijay@kissan.in', 'Vijay Traders', '+91 93333 44444', 'BUYER', 'Maharashtra', '{}', 'trader', ARRAY['Wheat','Rice']::text[], NULL, NULL, 'APPROVED', NULL, 'Verified buyer profile.', now(), now()),
   ('user_labor_suresh', 'suresh@kissan.in', 'Suresh Shinde', '+91 91111 11111', 'LABORER', 'Maharashtra', ARRAY['Harvesting','Sowing']::text[], NULL, '{}', 450, 6, 'APPROVED', NULL, 'Identity verified.', now(), now()),
   ('user_labor_amit', 'amit@kissan.in', 'Amit Pawar', '+91 92222 22222', 'LABORER', 'Maharashtra', ARRAY['Tractor Driving','Soil Tilling']::text[], NULL, '{}', 650, 4, 'APPROVED', NULL, 'Approved worker.', now(), now()),
-  ('user_labor_priya', 'priya@kissan.in', 'Priya Verma', '+91 93333 33333', 'LABORER', 'Punjab', ARRAY['Weeding','Irrigation']::text[], NULL, '{}', 380, 2, 'PENDING', NULL, 'Awaiting admin verification.', now(), now())
-;
+  ('user_labor_priya', 'priya@kissan.in', 'Priya Verma', '+91 93333 33333', 'LABORER', 'Punjab', ARRAY['Weeding','Irrigation']::text[], NULL, '{}', 380, 2, 'PENDING', NULL, 'Awaiting admin verification.', now(), now());
 
 insert into public.equipment (id, owner_id, name, category, description, daily_rate, available, location, created_at, updated_at)
 values
   ('eq_tractor_575', 'user_farmer_ramesh', 'Mahindra Tractor 575 DI', 'Tractor', '47 HP tractor with trolley. Ideal for tilling and haulage.', 1800, true, 'Nashik, Maharashtra', now(), now()),
   ('eq_rotavator', 'user_farmer_ramesh', 'Rotavator (6 feet)', 'Tillage', 'Heavy-duty rotavator for seedbed preparation.', 700, true, 'Nashik, Maharashtra', now(), now()),
   ('eq_thresher', 'user_farmer_ramesh', 'Thresher Machine', 'Thresher', 'Multi-crop thresher, tractor driven.', 1200, false, 'Sinnar, Maharashtra', now(), now()),
-  ('eq_harvester', 'user_farmer_anita', 'Combine Harvester', 'Harvester', 'Self-propelled combine harvester for wheat and paddy.', 6500, true, 'Ludhiana, Punjab', now(), now())
-;
+  ('eq_harvester', 'user_farmer_anita', 'Combine Harvester', 'Harvester', 'Self-propelled combine harvester for wheat and paddy.', 6500, true, 'Ludhiana, Punjab', now(), now());
 
 insert into public.jobs (id, farmer_id, laborer_id, title, description, location, required_skill, daily_wage, planned_days, start_date, status, created_at, updated_at)
 values
   ('job_wheat', 'user_farmer_ramesh', NULL, 'Wheat Harvesting - 4 acres', 'Manual and machine harvesting of wheat over 4 acres near Sinnar. Lunch provided.', 'Sinnar, Maharashtra', 'Harvesting', 550, 3, '2026-06-19', 'OPEN', now(), now()),
-  ('job_sugarcane', 'user_farmer_ramesh', 'user_labor_suresh', 'Sugarcane Loading Labor', 'Loading harvested sugarcane onto trucks. Heavy work, daily wage paid same day.', 'Nashik, Maharashtra', 'Weeding', 480, 5, '2026-06-22', 'ASSIGNED', now(), now())
-;
+  ('job_sugarcane', 'user_farmer_ramesh', 'user_labor_suresh', 'Sugarcane Loading Labor', 'Loading harvested sugarcane onto trucks. Heavy work, daily wage paid same day.', 'Nashik, Maharashtra', 'Weeding', 480, 5, '2026-06-22', 'ASSIGNED', now(), now());
 
 insert into public.applications (id, job_id, laborer_id, status, message, created_at)
 values
   ('app_suresh_sugarcane', 'job_sugarcane', 'user_labor_suresh', 'ACCEPTED', 'I can start this week.', now()),
-  ('app_priya_paddy', 'job_wheat', 'user_labor_priya', 'PENDING', 'Experienced in harvesting and field work.', now())
-;
+  ('app_priya_paddy', 'job_wheat', 'user_labor_priya', 'PENDING', 'Experienced in harvesting and field work.', now());
 
 insert into public.engagements (id, farmer_id, worker_id, job_id, cost_per_laborer, working_days, duration, assigned_tasks, status, total_cost, created_at, updated_at)
 values
-  ('eng_sugarcane', 'user_farmer_ramesh', 'user_labor_suresh', 'job_sugarcane', 480, 3, '3 days', ARRAY['Loading harvested cane','Stacking bundles']::text[], 'ACTIVE', 1440, now(), now())
-;
+  ('eng_sugarcane', 'user_farmer_ramesh', 'user_labor_suresh', 'job_sugarcane', 480, 3, '3 days', ARRAY['Loading harvested cane','Stacking bundles']::text[], 'ACTIVE', 1440, now(), now());
 
 insert into public.rentals (id, equipment_id, renter_id, owner_id, status, start_date, end_date, days, total_cost, message, created_at, updated_at)
 values
-  ('rent_thresher', 'eq_thresher', 'user_farmer_anita', 'user_farmer_ramesh', 'ACCEPTED', '2026-06-17', '2026-06-17', 1, 1200, 'Need it for one day.', now(), now())
-;
+  ('rent_thresher', 'eq_thresher', 'user_farmer_anita', 'user_farmer_ramesh', 'ACCEPTED', '2026-06-17', '2026-06-17', 1, 1200, 'Need it for one day.', now(), now());
 
 insert into public.listings (id, farmer_id, name, category, quantity_kg, price_per_kg, location, description, status, created_at, updated_at)
 values
   ('list_wheat_01', 'user_farmer_ramesh', 'Fresh Wheat', 'Grain', 2000, 24.0, 'Sinnar, Maharashtra', 'Premium quality wheat, freshly harvested.', 'active', now(), now()),
-  ('list_rice_01', 'user_farmer_anita', 'Organic Rice', 'Grain', 1200, 38.5, 'Ludhiana, Punjab', 'Organic paddy rice delivered dry.', 'active', now(), now())
-;
+  ('list_rice_01', 'user_farmer_anita', 'Organic Rice', 'Grain', 1200, 38.5, 'Ludhiana, Punjab', 'Organic paddy rice delivered dry.', 'active', now(), now());
 
 insert into public.draft_listings (id, farmer_id, name, category, quantity_kg, price_per_kg, location, description, status, created_at, updated_at)
 values
-  ('draft_01', 'user_farmer_ramesh', 'Draft Mustard Seeds', 'Oilseed', 300, 55.0, 'Sinnar, Maharashtra', 'Awaiting confirmation on moisture content.', 'draft', now(), now())
-;
+  ('draft_01', 'user_farmer_ramesh', 'Draft Mustard Seeds', 'Oilseed', 300, 55.0, 'Sinnar, Maharashtra', 'Awaiting confirmation on moisture content.', 'draft', now(), now());
 
 insert into public.inquiries (id, buyer_id, farmer_id, listing_id, message, quantity_kg, status, commission_rate, expected_commission, created_at, updated_at)
 values
-  ('inq_01', 'user_buyer_vijay', 'user_farmer_ramesh', 'list_wheat_01', 'Interested in 500 kg, please confirm availability.', 500, 'pending', 0.03, 360, now(), now())
-;
+  ('inq_01', 'user_buyer_vijay', 'user_farmer_ramesh', 'list_wheat_01', 'Interested in 500 kg, please confirm availability.', 500, 'pending', 0.03, 360, now(), now());
 
 insert into public.advisories (id, farmer_id, input_type, input_reference, description, language, diagnosis, probability, recommendation, created_at, updated_at)
 values
-  ('adv_01', 'user_farmer_ramesh', 'text', NULL, 'Leaf spots and yellowing on wheat plants.', 'en-IN', 'Fungal infection', 0.72, 'Apply a copper-based fungicide and improve drainage.', now(), now())
-;
+  ('adv_01', 'user_farmer_ramesh', 'text', NULL, 'Leaf spots and yellowing on wheat plants.', 'en-IN', 'Fungal infection', 0.72, 'Apply a copper-based fungicide and improve drainage.', now(), now());
 
 insert into public.workdays (id, job_id, laborer_id, date, present, note, created_at)
 values
@@ -319,8 +311,7 @@ values
   ('note_job_application', 'user_farmer_ramesh', 'JOB_APPLICATION', 'New job application', 'Priya Verma applied for Wheat Harvesting - 4 acres.', false, 'labor-hiring', now()),
   ('note_rental_request', 'user_farmer_ramesh', 'RENTAL_REQUEST', 'New rental request', 'Anita Kaur requested to rent Thresher Machine.', false, 'my-rentals', now()),
   ('note_inquiry_received', 'user_farmer_ramesh', 'INQUIRY_RECEIVED', 'New buyer inquiry', 'Vijay Traders asked about Fresh Wheat.', false, 'marketplace-inquiries', now()),
-  ('note_labor_assigned', 'user_labor_suresh', 'JOB_ASSIGNED', 'Application accepted', 'Ramesh Patil accepted your application for Sugarcane Loading Labor.', false, 'my-job', now())
-;
+  ('note_labor_assigned', 'user_labor_suresh', 'JOB_ASSIGNED', 'Application accepted', 'Ramesh Patil accepted your application for Sugarcane Loading Labor.', false, 'my-job', now());
 
 insert into public.blacklist (id, email, phone, reason, created_at)
 values
@@ -330,6 +321,9 @@ insert into public.voice_sessions (id, user_id, session_id, transcript, language
 values
   ('voice_demo', 'user_farmer_ramesh', 'session_intern4_demo', 'Need two laborers for wheat harvesting and tractor tilling near Sinnar.', 'en-IN', 'गेहूं की कटाई और ट्रैक्टर जुताई के लिए दो मजदूर चाहिए।', 'intern4-ai-transcriber', '{}'::jsonb, now());
 
+-- ==========================================
+-- 4. ENABLE SECURITY
+-- ==========================================
 alter table public.profiles enable row level security;
 alter table public.equipment enable row level security;
 alter table public.rentals enable row level security;
